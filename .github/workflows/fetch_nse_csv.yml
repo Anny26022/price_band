@@ -24,27 +24,31 @@ jobs:
       - name: Run fetch script
         run: python fetch_nse_price_bands.py
 
-      - name: Remove old CSVs (keep only today)
-        run: |
-          today=$(date +"%d%m%Y")
-          shopt -s extglob
-          # Delete all CSV files NOT matching today's date pattern
-          rm -f !(${today}.csv)
+      - name: Show files after fetch
+        run: ls -la
 
-      - name: Commit and push CSVs if changed
+      - name: Commit and push CSV
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          echo "Files in current directory:"
+          ls -la
 
-          # Stage CSV files and deletions
-          git add -A '*.csv'
+          echo "Git status before adding files:"
+          git status
 
-          # Check if there are staged changes
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Update NSE securities CSVs"
+          if ls *.csv 1> /dev/null 2>&1; then
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+            git add *.csv
+
+            echo "Git status after adding files:"
+            git status
+
+            git commit -m "Update NSE securities CSVs" || echo "No changes to commit"
+
             git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:main
+          else
+            echo "No CSV file to commit"
           fi
