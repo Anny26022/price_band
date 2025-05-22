@@ -18,7 +18,7 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install pandas requests pytz
+        run: pip install -r requirements.txt
 
       - name: Run fetch script
         id: fetch
