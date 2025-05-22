@@ -43,3 +43,4 @@ jobs:
             git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:main
           else
             echo "No CSV file to commit"
+          fi
