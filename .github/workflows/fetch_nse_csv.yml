@@ -34,13 +34,9 @@ jobs:
       - name: Commit and push CSV
         if: success()
         run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            git config --global user.name 'github-actions[bot]'
-            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-            git add *.csv
-            git add -u
-            git commit -m "Update NSE securities CSVs" || echo "No changes to commit"
-            git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
-          else
-            echo "No changes to commit"
-          fi
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add *.csv
+          git add -u
+          git diff-index --quiet HEAD || git commit -m "Update NSE securities CSVs"
+          git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
