@@ -1,0 +1,42 @@
+name: Fetch NSE CSV
+
+on:
+  schedule:
+    - cron: '30 11 * * 1-5' # Every weekday at 11:30 UTC (5:00 PM IST)
+  workflow_dispatch:
+
+jobs:
+  fetch-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install pandas requests pytz
+
+      - name: Run fetch script
+        id: fetch
+        run: python fetch_nse_price_bands.py
+
+      - name: Remove old CSVs (keep only today)
+        if: success()
+        run: |
+          today=$(date +"%d%m%Y")
+          shopt -s extglob
+          rm -f !(${today}.csv)
+
+      - name: Commit and push CSV
+        if: success()
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add *.csv
+          git add -u
+          git commit -m "Update NSE securities CSVs" || echo "No changes to commit"
+          git push 
