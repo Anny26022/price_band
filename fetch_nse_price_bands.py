@@ -4,8 +4,16 @@ import io
 from datetime import datetime, timedelta
 import pytz
 import sys
+from typing import Tuple, Optional
+import logging
 
-def get_latest_nse_csv_url():
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+)
+
+def get_latest_nse_csv_url() -> Tuple[Optional[str], Optional[str], Optional[datetime]]:
     """
     Attempts to fetch the latest available NSE securities CSV from the past 7 days.
     Skips weekends and handles session headers and cookie setup.
@@ -24,25 +32,35 @@ def get_latest_nse_csv_url():
     session.headers.update(headers)
     for url in ["https://www.nseindia.com/", "https://beta.nseindia.com/"]:
         try:
+            logging.info(f"Priming session with {url}")
             session.get(url, timeout=10)
-        except Exception:
+        except Exception as e:
+            logging.warning(f"Failed to prime session with {url}: {e}")
             continue
 
     for i in range(7):
         check_date = today_ist - timedelta(days=i)
         if check_date.weekday() >= 5:  # Skip weekends
+            logging.info(f"Skipping weekend: {check_date.strftime('%A, %d-%m-%Y')}")
             continue
         date_str = check_date.strftime("%d%m%Y")
         url = f"https://nsearchives.nseindia.com/content/equities/sec_list_{date_str}.csv"
+        logging.info(f"Trying URL: {url}")
         try:
             resp = session.get(url, timeout=10)
+            logging.info(f"Response status: {resp.status_code}, Content length: {len(resp.text)}")
             if resp.status_code == 200 and len(resp.text) > 1000:
+                logging.info(f"Found valid CSV for date: {check_date.strftime('%d-%m-%Y')}")
                 return url, resp.text, check_date
-        except Exception:
+            else:
+                logging.info(f"No valid CSV at {url}")
+        except Exception as e:
+            logging.error(f"Error fetching {url}: {e}")
             continue
+    logging.error("No NSE securities list file found in the last 7 days.")
     return None, None, None
 
-def fetch_nse_price_bands_df():
+def fetch_nse_price_bands_df() -> Tuple[pd.DataFrame, str, datetime]:
     """
     Fetches and parses the most recent NSE securities list into a DataFrame.
     Returns: (DataFrame, raw_csv_text, used_date)
@@ -50,18 +68,24 @@ def fetch_nse_price_bands_df():
     url, raw_csv, used_date = get_latest_nse_csv_url()
     if url is None or raw_csv is None:
         raise Exception("No NSE securities list file found in the last 7 days.")
-    df = pd.read_csv(io.StringIO(raw_csv))
-    df.columns = [c.strip().upper() for c in df.columns]
-    return df, raw_csv, used_date
+    try:
+        df = pd.read_csv(io.StringIO(raw_csv))
+        df.columns = [c.strip().upper() for c in df.columns]
+        logging.info(f"CSV loaded into DataFrame with {len(df)} rows and {len(df.columns)} columns.")
+        return df, raw_csv, used_date
+    except Exception as e:
+        logging.error(f"Error parsing CSV: {e}")
+        raise
 
 if __name__ == "__main__":
     try:
         df, raw_csv, used_date = fetch_nse_price_bands_df()
-        print(f"Data for: {used_date.strftime('%Y-%m-%d')}")
+        logging.info(f"Data for: {used_date.strftime('%Y-%m-%d')}")
         print(df.head())
         date_str = used_date.strftime("%d%m%Y")
         df.to_csv(f"{date_str}.csv", index=False)
+        logging.info(f"CSV saved as {date_str}.csv")
         sys.exit(0)
     except Exception as e:
-        print(f"No new CSV found: {e}")
+        logging.error(f"No new CSV found: {e}")
         sys.exit(1) 
