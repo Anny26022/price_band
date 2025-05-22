@@ -28,19 +28,23 @@ jobs:
         run: |
           today=$(date +"%d%m%Y")
           shopt -s extglob
+          # Delete all CSV files NOT matching today's date pattern
           rm -f !(${today}.csv)
 
-      - name: Commit and push CSV
+      - name: Commit and push CSVs if changed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if ls *.csv 1> /dev/null 2>&1; then
-            git config --global user.name 'github-actions[bot]'
-            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-            git add *.csv
-            git add -u
-            git commit -m "Update NSE securities CSVs" || echo "No changes to commit"
-            git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:main
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+          # Stage CSV files and deletions
+          git add -A '*.csv'
+
+          # Check if there are staged changes
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
           else
-            echo "No CSV file to commit"
+            git commit -m "Update NSE securities CSVs"
+            git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:main
           fi
