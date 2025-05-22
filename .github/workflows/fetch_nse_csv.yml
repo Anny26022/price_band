@@ -27,9 +27,13 @@ jobs:
       - name: Remove old CSVs (keep only today)
         if: success()
         run: |
-          today=$(date +"%d%m%Y")
-          shopt -s extglob
-          rm -f !(${today}.csv)
+          today=$(date +"%d%m%Y")  # Using DDMMYYYY format
+          # Only remove CSV files that match the pattern DDMMYYYY.csv
+          for file in [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].csv; do
+            if [ -f "$file" ] && [ "$file" != "${today}.csv" ]; then
+              rm -f "$file"
+            fi
+          done
 
       - name: Commit changes
         if: success()
