@@ -1,5 +1,5 @@
 import pandas as pd
-import httpx
+import requests
 import io
 from datetime import datetime, timedelta
 import pytz
@@ -13,49 +13,44 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
 )
 
+SCRAPER_API_KEY = "492fed55ee317f3d46a5336e5bda77b8"  # your ScraperAPI key
+
 def get_latest_nse_csv_url() -> Tuple[Optional[str], Optional[str], Optional[datetime]]:
     """
-    Attempts to fetch the latest available NSE securities CSV from the past 7 days.
-    Skips weekends and handles session headers and cookie setup.
+    Fetches the latest available NSE securities CSV via ScraperAPI.
+    Skips weekends and returns first valid CSV found in last 7 days.
     Returns: (url, raw_csv_text, used_date) or (None, None, None) if not found.
     """
     IST = pytz.timezone('Asia/Kolkata')
     today_ist = datetime.now(IST)
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        "Accept": "text/csv,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Referer": "https://www.nseindia.com/",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Connection": "keep-alive"
-    }
-    with httpx.Client(headers=headers, timeout=10, follow_redirects=True) as client:
-        for url in ["https://www.nseindia.com/", "https://beta.nseindia.com/"]:
-            try:
-                logging.info(f"Priming session with {url}")
-                client.get(url)
-            except Exception as e:
-                logging.warning(f"Failed to prime session with {url}: {e}")
-                continue
 
-        for i in range(7):
-            check_date = today_ist - timedelta(days=i)
-            if check_date.weekday() >= 5:  # Skip weekends
-                logging.info(f"Skipping weekend: {check_date.strftime('%A, %d-%m-%Y')}")
-                continue
-            date_str = check_date.strftime("%d%m%Y")
-            url = f"https://nsearchives.nseindia.com/content/equities/sec_list_{date_str}.csv"
-            logging.info(f"Trying URL: {url}")
-            try:
-                resp = client.get(url)
-                logging.info(f"Response status: {resp.status_code}, Content length: {len(resp.text)}")
-                if resp.status_code == 200 and len(resp.text) > 1000:
-                    logging.info(f"Found valid CSV for date: {check_date.strftime('%d-%m-%Y')}")
-                    return url, resp.text, check_date
-                else:
-                    logging.info(f"No valid CSV at {url}")
-            except Exception as e:
-                logging.error(f"Error fetching {url}: {e}")
-                continue
+    for i in range(7):
+        check_date = today_ist - timedelta(days=i)
+        if check_date.weekday() >= 5:  # Skip weekends
+            logging.info(f"Skipping weekend: {check_date.strftime('%A, %d-%m-%Y')}")
+            continue
+        date_str = check_date.strftime("%d%m%Y")
+        url = f"https://nsearchives.nseindia.com/content/equities/sec_list_{date_str}.csv"
+        logging.info(f"Trying URL via ScraperAPI: {url}")
+
+        payload = {
+            "api_key": SCRAPER_API_KEY,
+            "url": url,
+            "country_code": "in",
+            "device_type": "desktop",
+            "keep_headers": "true"
+        }
+
+        try:
+            r = requests.get("https://api.scraperapi.com/", params=payload, timeout=30)
+            logging.info(f"Response status: {r.status_code}, Content length: {len(r.text)}")
+            if r.status_code == 200 and len(r.text) > 1000:
+                logging.info(f"Valid CSV found for date: {check_date.strftime('%d-%m-%Y')}")
+                return url, r.text, check_date
+        except Exception as e:
+            logging.error(f"Error fetching CSV via ScraperAPI for {url}: {e}")
+            continue
+
     logging.error("No NSE securities list file found in the last 7 days.")
     return None, None, None
 
@@ -87,4 +82,4 @@ if __name__ == "__main__":
         sys.exit(0)
     except Exception as e:
         logging.error(f"No new CSV found: {e}")
-        sys.exit(1) 
+        sys.exit(1)
