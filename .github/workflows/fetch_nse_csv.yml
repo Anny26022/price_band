@@ -1,4 +1,4 @@
-: Fetch NSE CSV
+name: Fetch NSE CSV
 
 on:
   schedule:
