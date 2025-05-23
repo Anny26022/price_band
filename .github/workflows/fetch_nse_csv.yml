@@ -1,13 +1,13 @@
-name: Fetch NSE CSV
+: Fetch NSE CSV
 
 on:
   schedule:
-    - cron: '30 11 * * 1-5' # Every weekday at 11:30 UTC (5:00 PM IST)
+    - cron: '31 13 * * 1-5' # Every weekday at 13:31 UTC (7:01 PM IST)
   workflow_dispatch:
 
 jobs:
   fetch-and-commit:
-    runs-on: ubuntu-latest
+    runs-onname: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -30,13 +30,19 @@ jobs:
         if: success()
         run: |
           today=$(date +"%d%m%Y")
-          # Remove only CSV files that match DDMMYYYY pattern and aren't from today
+          shopt -s nullglob
+          found_csvs=false
           for file in [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].csv; do
+            found_csvs=true
             if [[ -f "$file" && "$file" != "${today}.csv" ]]; then
               echo "Removing old CSV: $file"
               rm -f "$file"
             fi
           done
+          shopt -u nullglob
+          if [ "$found_csvs" = false ]; then
+            echo "No CSV files found to delete. Skipping deletion step."
+          fi
 
       - name: Commit changes
         if: success()
