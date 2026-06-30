@@ -25,6 +25,8 @@ jobs:
       - name: Run fetch script
         id: fetch
         run: python fetch_nse_price_bands.py
+        env:
+          SCRAPER_API_KEY: ${{ secrets.SCRAPER_API_KEY }}
 
       - name: Remove old CSVs (keep only today)
         if: success()
