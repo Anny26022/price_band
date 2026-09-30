@@ -1,6 +1,7 @@
 import pandas as pd
 import requests
 import io
+import os
 from datetime import datetime, timedelta
 import pytz
 import sys
@@ -13,7 +14,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
 )
 
-SCRAPER_API_KEY = "a3e2e9973fc71bc726b90be815a838df"  # your ScraperAPI key
+SCRAPER_API_KEY = os.environ.get("SCRAPER_API_KEY", "").strip()
 
 def get_latest_nse_csv_url() -> Tuple[Optional[str], Optional[str], Optional[datetime]]:
     """
@@ -21,6 +22,9 @@ def get_latest_nse_csv_url() -> Tuple[Optional[str], Optional[str], Optional[dat
     Skips weekends and returns first valid CSV found in last 7 days.
     Returns: (url, raw_csv_text, used_date) or (None, None, None) if not found.
     """
+    if not SCRAPER_API_KEY:
+        raise RuntimeError("SCRAPER_API_KEY environment variable is required.")
+
     IST = pytz.timezone('Asia/Kolkata')
     today_ist = datetime.now(IST)
 
