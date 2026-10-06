@@ -13,7 +13,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
 )
 
-SCRAPER_API_KEY = "a3e2e9973fc71bc726b90be815a838df"  # your ScraperAPI key
+SCRAPER_API_KEY = "f1344476b3bf7cad9412753fb54bddd7"  # your ScraperAPI key
 
 def get_latest_nse_csv_url() -> Tuple[Optional[str], Optional[str], Optional[datetime]]:
     """
