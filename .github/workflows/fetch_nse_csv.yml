@@ -1,8 +1,7 @@
 name: Fetch NSE CSV
 
 on:
-  schedule:
-    - cron: '31 13 * * 1-5' # Every weekday at 13:31 UTC (7:01 PM IST)
+  # Started at 19:05 IST on NSE market days by the nexus-gh-cron Worker in new_nexys_ultimate (workers/gh-cron/schedule.ts), not a GitHub schedule.
   workflow_dispatch:
 
 jobs:
